@@ -1,17 +1,19 @@
 import kaboom from "https://kaboomjs.com/lib/0.5.1/kaboom.mjs";
 
-// Names of animations to cycle through
-const ANIMATIONS = ['idle', 'walk', 'charge'];
+const CANVAS = document.querySelector('canvas');
 // Names of all dinos
 const DINO_NAMES = ['Mort', 'Vita', 'Doux', 'Tard'];
+/** Time for tooltip to disappear after hovering ends */
 const TOOLTIP_DISAPPEAR_DELEY = 2.5;
+/** Respawn time bounds */
 const RESPAWN_RANGE = [2.5, 7.5];
 
 /** @type {import('kaboom').KaboomCtx} */
 const k = kaboom({
-	canvas: document.querySelector('canvas'),
+	canvas: CANVAS,
 	width: window.innerWidth,
 	height: window.innerHeight - 25,
+	clearColor: [0, 0, 0, 0.90],
 	debug: true
 });
 
@@ -88,6 +90,8 @@ k.scene('main', () => {
 		// If dinos have eachother as targets, 50/50 chance for each to be destroyed
 		let possibles = [target];
 		if (dinos[target.targetIndex] === dino) possibles.push(dino);
+		// Prevent attackDino being executed twice
+		if (!possibles.every(d => d.exists())) return;
 		const destroying = randomFrom(possibles);
 
 		// Increment score of dino not being destroyed
@@ -185,10 +189,7 @@ k.scene('main', () => {
 
 		// Collide with target dino
 		(() => {
-			dino.collides('dino', (/** @type {DinoType} */other) => {
-				const target = dinos[dino.targetIndex];
-				if (other === target && target.exists()) attackDino(dino, target);;
-			})
+			dino.collides('dino', (/** @type {DinoType} */other) => attackDino(dino, other))
 		})();
 
 
@@ -199,10 +200,11 @@ k.scene('main', () => {
 
 		// Pathfind to target dino
 		(() => {
-			const SPEED = Math.min(k.width(), k.height()) / 20;
+			const SPEED = Math.min(k.width(), k.height()) / 20 + (dino.player ? 10 : 0);
 
 			dino.action(() => {
 				let target = dinos[dino.targetIndex];
+				if (dino.player) target = { pos: k.mousePos(), exists: () => true };
 				if (!target.exists() || dino === target) {
 					// If there are still active dinos, cycle to next one
 					if (dinos.filter(d => d.exists()).length > 1) return dino.cycleTarget();
@@ -235,7 +237,7 @@ k.scene('main', () => {
 		return dino
 	}
 
-	const dinos = DINO_NAMES.map(name => createDino(name));
+	const dinos = DINO_NAMES.map((name, i) => createDino(name, { player: !i}));
 
 	for (let i = 0; i < dinos.length; i++) dinos[i].targetIndex = (i + 1) % dinos.length
 
