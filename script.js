@@ -12,7 +12,7 @@ const k = kaboom({
 	canvas: document.querySelector('canvas'),
 	width: window.innerWidth,
 	height: window.innerHeight - 25,
-	debug: true
+	clearColor: [0, 0, 0, 0.90],
 });
 
 window.k = k
